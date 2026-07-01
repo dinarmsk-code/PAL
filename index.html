@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Упаковка паллеты — EPAL (шашки прижаты к краям)</title>
+    <title>3D Упаковка паллеты 122x82 см — PRO-версия</title>
     <style>
         body {
             margin: 0; overflow: hidden;
@@ -79,21 +79,36 @@
 </head>
 <body>
     <div id="sidebar">
+        <!-- НОВАЯ ПАНЕЛЬ: ВЫБОР ТОВАРА -->
+        <div class="panel">
+            <h3>📋 Товары</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <select id="product-select" style="background:#1e2a3a; color:white; padding:8px; border-radius:8px; border:1px solid #556688;">
+                </select>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <span style="color:#aaa;">Кол:</span>
+                    <input id="product-cnt" type="number" value="1" min="1" max="100" step="1" style="width:70px; background:#1e2a3a; color:white; padding:8px; border-radius:8px; border:1px solid #556688;">
+                    <button class="btn" id="add-product-btn">➕</button>
+                </div>
+                <div id="product-dimensions" style="color:#aaa; font-size:0.8rem; margin-top:4px;"></div>
+            </div>
+        </div>
+
         <div class="panel">
             <h3>📦 Коробки (см)</h3>
             <div class="box-form">
                 <div class="input-row">
-                    <div class="input-group"><label>Ш</label><input id="inp-w" value="30" type="number" step="1" min="1"></div>
-                    <div class="input-group"><label>Г</label><input id="inp-d" value="20" type="number" step="1" min="1"></div>
-                    <div class="input-group"><label>В</label><input id="inp-h" value="25" type="number" step="1" min="1"></div>
+                    <div class="input-group"><label>Ш</label><input id="inp-w" value="30" type="number" step="1" min="1" max="100"></div>
+                    <div class="input-group"><label>Г</label><input id="inp-d" value="20" type="number" step="1" min="1" max="100"></div>
+                    <div class="input-group"><label>В</label><input id="inp-h" value="25" type="number" step="1" min="1" max="100"></div>
                     <div class="input-group"><label>Кол</label><input id="inp-cnt" value="2" type="number" step="1" min="1" max="100"></div>
                     <button class="btn" id="add-btn" style="flex:1;">➕</button>
                 </div>
                 <div class="box-list" id="box-list-container"></div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button class="btn" id="clear-boxes">🗑️ Очистить</button>
-                    <button class="btn" id="preset-btn">📋 Стандарт</button>
-                    <button class="btn" id="reset-highlight">🔆 Сброс подсветки</button>
+                    <button class="btn" id="preset-btn">📋 Стандарт (12 типов)</button>
+                    <button class="btn" id="reset-highlight">🔍 Снять выделение</button>
                     <button class="btn" id="toggle-labels">🔤 Подписи (вкл)</button>
                 </div>
             </div>
@@ -132,7 +147,7 @@
             <div class="stat-row"><span class="stat-label">🎯 Фитнес</span><span class="stat-value" id="best-fitness">0</span></div>
         </div>
     </div>
-    <div id="status-bar">🟢 Готов. Добавьте коробки и запустите.</div>
+    <div id="status-bar">🟢 PRO-режим. Паллета 122×82 см. Добавьте коробки.</div>
 
     <script type="importmap">
         {"imports":{
@@ -147,11 +162,40 @@
         import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
         import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
-        const AREA_W = 1.2;
-        const AREA_D = 0.8;
+        // ---------- СПРАВОЧНИК ТОВАРОВ ----------
+        const PRODUCTS = [
+            { name: "MI_RP_X20+", w: 0.41, d: 0.64, h: 0.42 },
+            { name: "MI_RP_X10+", w: 0.62, d: 0.49, h: 0.39 },
+            { name: "MI_M_G27_P27FDA-RG", w: 0.13, d: 0.69, h: 0.44 },
+            { name: "MI_M_G25_P25FDA-RG", w: 0.10, d: 0.69, h: 0.40 },
+            { name: "MI_M_GPRO27Q_P27QDA-RGP", w: 0.14, d: 0.86, h: 0.46 },
+            { name: "MI_M_X27GQ_P27QCA-RX", w: 0.11, d: 0.69, h: 0.43 },
+            { name: "MI_M_G34WQ_C34WQBA-RG", w: 0.17, d: 0.96, h: 0.46 },
+            { name: "MI_P_G20MAX", w: 0.37, d: 0.72, h: 0.16 },
+            { name: "MI_BS_SP_MDZ-39-DB", w: 0.39, d: 0.40, h: 0.31 },
+            { name: "MI_BS_SO_MDZ-38-DB", w: 0.27, d: 0.23, h: 0.31 },
+            { name: "MI_ROUTER_BE3600", w: 0.24, d: 0.48, h: 0.55 },
+            { name: "MI_B_SPORT", w: 0.20, d: 0.30, h: 0.30 },
+            { name: "MI_M_G27Q_P27QDB-RG", w: 0.69, d: 0.14, h: 0.46 },
+            { name: "MI_M_G27Q_P27QDC-RG", w: 0.86, d: 0.14, h: 0.46 },
+            { name: "MI_M_GPRO27U_P27UDA-RGP", w: 0.14, d: 0.86, h: 0.46 },
+            { name: "MI_RB_BUDS8_LITE", w: 0.32, d: 0.44, h: 0.35 },
+            { name: "MI_M_G27U_P27UDA-RG", w: 0.86, d: 0.14, h: 0.46 },
+            { name: "MI_ROUTER_AX3000T", w: 0.39, d: 0.37, h: 0.50 },
+            { name: "MI_VESY_S200", w: 0.31, d: 0.36, h: 0.32 },
+            { name: "MI_IPC_MJSXJ09CM", w: 0.38, d: 0.19, h: 0.36 },
+            { name: "MI_TV_STICK_HD_2nd", w: 0.48, d: 0.25, h: 0.20 },
+            { name: "MI_TV_STICK_4K_2nd_RU", w: 0.42, d: 0.29, h: 0.20 },
+            { name: "MI_PROJECTOR_L1", w: 0.49, d: 0.42, h: 0.48 }
+        ];
+
+        // ---------- ГАБАРИТЫ ПАЛЛЕТЫ 122x82 см ----------
+        const AREA_W = 1.22;
+        const AREA_D = 0.82;
         const MAX_BOX_DIM = 1.0;
         const COLORS = [0xe67e22, 0x3498db, 0x2ecc71, 0xe74c3c, 0xf1c40f, 0x9b59b6, 0x1abc9c];
 
+        // ---------- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ----------
         let boxesData = [];
         let flatBoxes = [];
         let totalCount = 0;
@@ -159,6 +203,7 @@
         let isRunning = false;
         let currentMeshes = [];
         let labelsVisible = true;
+        const geometryCache = new Map();
 
         const elements = {
             list: document.getElementById('box-list-container'),
@@ -182,20 +227,51 @@
             addBtn: document.getElementById('add-btn'),
             clearBtn: document.getElementById('clear-boxes'),
             presetBtn: document.getElementById('preset-btn'),
-            toggleLabelsBtn: document.getElementById('toggle-labels')
+            toggleLabelsBtn: document.getElementById('toggle-labels'),
+            // Новые элементы
+            productSelect: document.getElementById('product-select'),
+            productCnt: document.getElementById('product-cnt'),
+            addProductBtn: document.getElementById('add-product-btn'),
+            productDims: document.getElementById('product-dimensions')
         };
+
+        // ---------- ЗАПОЛНЕНИЕ ВЫПАДАЮЩЕГО СПИСКА ТОВАРОВ ----------
+        function populateProductSelect() {
+            const select = elements.productSelect;
+            PRODUCTS.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.name;
+                option.textContent = `${p.name} (${Math.round(p.w*100)}×${Math.round(p.d*100)}×${Math.round(p.h*100)})`;
+                select.appendChild(option);
+            });
+            // Показать размеры первого товара по умолчанию
+            if (PRODUCTS.length > 0) {
+                const first = PRODUCTS[0];
+                elements.productDims.textContent = `Размеры: ${Math.round(first.w*100)}×${Math.round(first.d*100)}×${Math.round(first.h*100)} см`;
+            }
+        }
+
+        // Обработчик изменения товара
+        elements.productSelect.addEventListener('change', () => {
+            const idx = elements.productSelect.selectedIndex;
+            if (idx >= 0 && idx < PRODUCTS.length) {
+                const p = PRODUCTS[idx];
+                elements.productDims.textContent = `Размеры: ${Math.round(p.w*100)}×${Math.round(p.d*100)}×${Math.round(p.h*100)} см`;
+            } else {
+                elements.productDims.textContent = '';
+            }
+        });
 
         // ---------- СЦЕНА ----------
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0f1420);
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(2.2, 1.8, 2.8);
-        camera.lookAt(0.6, 0.5, 0.4);
+        camera.position.set(2.3, 1.9, 2.9);
+        camera.lookAt(AREA_W/2, 0.5, AREA_D/2);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.shadowMap.normalOffset = 0.02;
         document.body.appendChild(renderer.domElement);
 
         const labelRenderer = new CSS2DRenderer();
@@ -207,7 +283,7 @@
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.target.set(0.6, 0.3, 0.4);
+        controls.target.set(AREA_W/2, 0.35, AREA_D/2);
 
         scene.add(new THREE.AmbientLight(0x606080, 1.0));
         const dirLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
@@ -224,9 +300,8 @@
         scene.add(new THREE.PointLight(0x4466ff, 0.4));
         scene.add(new THREE.PointLight(0xffaa66, 0.4));
 
-        // ---------- ПАЛЛЕТА EPAL (шашки прижаты к краям) ----------
+        // ---------- ПОСТРОЕНИЕ ПАЛЛЕТЫ 122x82 (ДЕТАЛИЗИРОВАННОЕ) ----------
         const palletGroup = new THREE.Group();
-
         const textureLoader = new THREE.TextureLoader();
         const woodTexture = textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg');
         woodTexture.wrapS = THREE.RepeatWrapping; woodTexture.wrapT = THREE.RepeatWrapping;
@@ -239,36 +314,33 @@
         const bottomH = 0.022;
         const crossH = 0.022;
         const topH = 0.022;
-        const totalH = blockH + bottomH + crossH + topH; // 0.144 м
+        const totalH = blockH + bottomH + crossH + topH;
         const roundRadius = 0.003;
 
-        // Нижние доски (лыжи) – прижаты к краям Z
+        // Нижние доски (по длине X = 1.22)
         const bottomWidths = [0.100, 0.145, 0.100];
-        const bottomZCenters = [0.05, 0.4, 0.75];
+        const bottomZCenters = [0.05, AREA_D / 2, AREA_D - 0.05];
         bottomWidths.forEach((w, i) => {
-            const geo = new RoundedBoxGeometry(1.2, bottomH, w, 2, roundRadius);
+            const geo = new RoundedBoxGeometry(AREA_W, bottomH, w, 2, roundRadius);
             const board = new THREE.Mesh(geo, woodMaterial);
-            board.position.set(0.6, -totalH + bottomH/2, bottomZCenters[i]);
+            board.position.set(AREA_W/2, -totalH + bottomH/2, bottomZCenters[i]);
             board.castShadow = true; board.receiveShadow = true;
             palletGroup.add(board);
         });
 
-        // Шашки (9 шт.) – угловые прижаты к краям (центр на половине ширины от края)
-        const edgeDistX = 0.0725; // центр угловой шашки по X (ширина 0.145)
-        const edgeDistZ = 0.0725; // центр угловой шашки по Z
+        // Блоки (9 штук) с новыми X/Z позициями под 122x82
+        const edgeDistX = 0.0725;
+        const edgeDistZ = 0.0725;
         const blockPositions = [
-            // Угловые (145×145)
             { x: edgeDistX, z: edgeDistZ, w: 0.145, d: 0.145 },
             { x: edgeDistX, z: AREA_D - edgeDistZ, w: 0.145, d: 0.145 },
             { x: AREA_W - edgeDistX, z: edgeDistZ, w: 0.145, d: 0.145 },
             { x: AREA_W - edgeDistX, z: AREA_D - edgeDistZ, w: 0.145, d: 0.145 },
-            // Центральные по бокам (145×100)
-            { x: edgeDistX, z: 0.4, w: 0.145, d: 0.100 },
-            { x: AREA_W - edgeDistX, z: 0.4, w: 0.145, d: 0.100 },
-            { x: 0.6, z: edgeDistZ, w: 0.145, d: 0.100 },
-            { x: 0.6, z: AREA_D - edgeDistZ, w: 0.145, d: 0.100 },
-            // Центральная (145×100)
-            { x: 0.6, z: 0.4, w: 0.145, d: 0.100 }
+            { x: edgeDistX, z: AREA_D/2, w: 0.145, d: 0.100 },
+            { x: AREA_W - edgeDistX, z: AREA_D/2, w: 0.145, d: 0.100 },
+            { x: AREA_W/2, z: edgeDistZ, w: 0.145, d: 0.100 },
+            { x: AREA_W/2, z: AREA_D - edgeDistZ, w: 0.145, d: 0.100 },
+            { x: AREA_W/2, z: AREA_D/2, w: 0.145, d: 0.100 }
         ];
         blockPositions.forEach(bp => {
             const geo = new RoundedBoxGeometry(bp.w, blockH, bp.d, 2, roundRadius);
@@ -278,50 +350,34 @@
             palletGroup.add(block);
         });
 
-        // Поперечные доски (3 шт.) – опираются на шашки, центры совпадают с шашками по X
-        const crossXCenters = [edgeDistX, 0.6, AREA_W - edgeDistX];
+        // Поперечные брусья (длина Z = AREA_D = 0.82)
+        const crossXCenters = [edgeDistX, AREA_W/2, AREA_W - edgeDistX];
         crossXCenters.forEach(x => {
-            const geo = new RoundedBoxGeometry(0.145, crossH, 0.8, 2, roundRadius);
+            const geo = new RoundedBoxGeometry(0.145, crossH, AREA_D, 2, roundRadius);
             const cross = new THREE.Mesh(geo, woodMaterial);
-            cross.position.set(x, -totalH + bottomH + blockH + crossH/2, 0.4);
+            cross.position.set(x, -totalH + bottomH + blockH + crossH/2, AREA_D/2);
             cross.castShadow = true; cross.receiveShadow = true;
             palletGroup.add(cross);
         });
 
-        // Верхний настил (5 досок, равномерные зазоры)
+        // Верхние доски (X = AREA_W, распределение по Z)
         const topWidths = [0.145, 0.100, 0.145, 0.100, 0.145];
         const topTotalWidth = topWidths.reduce((a, b) => a + b, 0);
         const topGaps = (AREA_D - topTotalWidth) / (topWidths.length - 1);
-        let zPos = 0;
+        let zPosTop = 0;
         topWidths.forEach((w, i) => {
-            const geo = new RoundedBoxGeometry(1.2, topH, w, 2, roundRadius);
+            const geo = new RoundedBoxGeometry(AREA_W, topH, w, 2, roundRadius);
             const board = new THREE.Mesh(geo, woodMaterial);
-            const centerZ = zPos + w/2;
-            board.position.set(0.6, -totalH + bottomH + blockH + crossH + topH/2, centerZ);
+            const centerZ = zPosTop + w/2;
+            board.position.set(AREA_W/2, -totalH + bottomH + blockH + crossH + topH/2, centerZ);
             board.castShadow = true; board.receiveShadow = true;
             palletGroup.add(board);
-            zPos += w + (i < topWidths.length - 1 ? topGaps : 0);
+            zPosTop += w + (i < topWidths.length - 1 ? topGaps : 0);
         });
-
-        // Клеймо EPAL
-        const stampCanvas = document.createElement('canvas');
-        stampCanvas.width = 128; stampCanvas.height = 64;
-        const ctx = stampCanvas.getContext('2d');
-        ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, stampCanvas.width, stampCanvas.height);
-        ctx.font = 'bold 28px Arial'; ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('EPAL', stampCanvas.width/2, stampCanvas.height/2);
-        const stampTexture = new THREE.CanvasTexture(stampCanvas);
-        const stampMaterial = new THREE.MeshBasicMaterial({ map: stampTexture, transparent: true });
-        const stampGeo = new THREE.PlaneGeometry(0.12, 0.05);
-        const stamp = new THREE.Mesh(stampGeo, stampMaterial);
-        stamp.position.set(edgeDistX, -totalH + bottomH + blockH + 0.01, edgeDistZ + 0.145/2 + 0.001);
-        stamp.rotation.y = Math.PI / 2;
-        palletGroup.add(stamp);
 
         scene.add(palletGroup);
 
-        // Рамка
+        // РАМКА ГРАНИЦ (контур паллеты)
         const borderMaterial = new THREE.LineBasicMaterial({ color: 0xffaa00 });
         const borderPoints = [
             new THREE.Vector3(0, 0.001, 0), new THREE.Vector3(AREA_W, 0.001, 0),
@@ -331,8 +387,9 @@
         const borderGeo = new THREE.BufferGeometry().setFromPoints(borderPoints);
         scene.add(new THREE.Line(borderGeo, borderMaterial));
 
+        // Текст размера паллеты
         const sizeLabelDiv = document.createElement('div');
-        sizeLabelDiv.textContent = '120 × 80 см';
+        sizeLabelDiv.textContent = '122 × 82 см';
         sizeLabelDiv.style.cssText = 'color:#ccc;font-size:12px;background:#00000080;padding:2px 8px;border-radius:12px;pointer-events:none;';
         const sizeLabel = new CSS2DObject(sizeLabelDiv);
         sizeLabel.position.set(AREA_W/2, 0.1, AREA_D/2);
@@ -341,7 +398,7 @@
         const boxesGroup = new THREE.Group();
         scene.add(boxesGroup);
 
-        // ---------- УТИЛИТЫ ----------
+        // ---------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ----------
         function getLetter(index) {
             let n = index, result = '';
             while (n >= 0) { result = String.fromCharCode(65 + (n % 26)) + result; n = Math.floor(n / 26) - 1; }
@@ -416,11 +473,12 @@
             renderBoxList();
             visualize([]);
         }
-
         function highlightByLetter(letter) {
+            let found = false;
             currentMeshes.forEach(item => {
                 if (!item.mesh) return;
                 const needHighlight = (item.letter === letter);
+                if (needHighlight) found = true;
                 if (!item.originalMaterial) item.originalMaterial = item.mesh.material;
                 if (needHighlight) {
                     item.mesh.material = item.originalMaterial;
@@ -439,8 +497,9 @@
             });
             document.querySelectorAll('.box-item').forEach(el => {
                 el.classList.remove('selected');
-                if (el.dataset.letter === letter) el.classList.add('selected');
+                if (el.dataset.letter === letter && found) el.classList.add('selected');
             });
+            if (!found) resetHighlight();
         }
         function resetHighlight() {
             currentMeshes.forEach(item => {
@@ -466,7 +525,9 @@
         function visualize(placed) {
             while (boxesGroup.children.length > 0) {
                 const child = boxesGroup.children[0];
-                if (child.isMesh) {
+                if (child.isCSS2DObject) {
+                    labelRenderer.domElement.removeChild(child.element);
+                } else if (child.isMesh) {
                     child.geometry?.dispose();
                     if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
                     else child.material?.dispose();
@@ -478,17 +539,24 @@
                 boxesGroup.remove(child);
             }
             currentMeshes = [];
+
             if (!placed?.length) {
                 elements.packed.textContent = `0/${totalCount}`;
                 updateVolumeStats();
                 return;
             }
+
             let placedVolume = 0;
             placed.forEach(item => {
                 const { dims, pos, color, letter } = item;
                 const [w, h, d] = dims;
                 placedVolume += w * h * d;
-                const geo = new THREE.BoxGeometry(w, h, d);
+                const cacheKey = `${w.toFixed(3)},${h.toFixed(3)},${d.toFixed(3)}`;
+                let geo = geometryCache.get(cacheKey);
+                if (!geo) {
+                    geo = new THREE.BoxGeometry(w, h, d);
+                    geometryCache.set(cacheKey, geo);
+                }
                 const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.4 });
                 const mesh = new THREE.Mesh(geo, mat);
                 mesh.castShadow = true; mesh.receiveShadow = true;
@@ -514,6 +582,7 @@
                 boxesGroup.add(labelObj);
                 currentMeshes.push({ mesh, line, letter, label: labelObj, originalMaterial: mat });
             });
+
             elements.packed.textContent = `${placed.length}/${totalCount}`;
             elements.fitness.textContent = `${placed.length}/${totalCount}`;
             updateVolumeStats(placed.length, placedVolume);
@@ -521,160 +590,342 @@
         }
 
         function addBox() {
-            const w = parseFloat(elements.inpW.value) / 100;
-            const d = parseFloat(elements.inpD.value) / 100;
-            const h = parseFloat(elements.inpH.value) / 100;
-            const cnt = parseInt(elements.inpCnt.value, 10);
-            if (isNaN(w) || isNaN(d) || isNaN(h) || isNaN(cnt)) return;
-            if (w <= 0 || d <= 0 || h <= 0 || cnt <= 0) return;
-            if (w > MAX_BOX_DIM || d > MAX_BOX_DIM || h > MAX_BOX_DIM) {
-                alert(`Размеры коробки не должны превышать ${MAX_BOX_DIM*100} см`);
+            const wRaw = elements.inpW.value.trim();
+            const dRaw = elements.inpD.value.trim();
+            const hRaw = elements.inpH.value.trim();
+            const cntRaw = elements.inpCnt.value.trim();
+            if (!wRaw || !dRaw || !hRaw || !cntRaw) {
+                elements.status.textContent = '⚠️ Заполните все поля';
+                return;
+            }
+            const w = parseFloat(wRaw) / 100;
+            const d = parseFloat(dRaw) / 100;
+            const h = parseFloat(hRaw) / 100;
+            const cnt = parseInt(cntRaw, 10);
+            if (isNaN(w) || isNaN(d) || isNaN(h) || isNaN(cnt)) {
+                elements.status.textContent = '⚠️ Некорректные значения';
+                return;
+            }
+            if (w <= 0 || w > MAX_BOX_DIM || d <= 0 || d > MAX_BOX_DIM || h <= 0 || h > MAX_BOX_DIM) {
+                elements.status.textContent = `⚠️ Размеры от 1 до ${MAX_BOX_DIM*100} см`;
+                return;
+            }
+            if (cnt <= 0 || cnt > 100) {
+                elements.status.textContent = '⚠️ Количество от 1 до 100';
                 return;
             }
             boxesData.push({ w, d, h, count: cnt, color: COLORS[boxesData.length % COLORS.length], letter: getLetter(boxesData.length) });
             renderBoxList();
             visualize([]);
+            elements.status.textContent = '✅ Коробка добавлена';
         }
+
+        // ФУНКЦИЯ ДОБАВЛЕНИЯ ТОВАРА ИЗ СПРАВОЧНИКА
+        function addProduct() {
+            const select = elements.productSelect;
+            const idx = select.selectedIndex;
+            if (idx < 0 || idx >= PRODUCTS.length) {
+                elements.status.textContent = '⚠️ Выберите товар из списка';
+                return;
+            }
+            const product = PRODUCTS[idx];
+            const cntRaw = elements.productCnt.value.trim();
+            if (!cntRaw) {
+                elements.status.textContent = '⚠️ Укажите количество';
+                return;
+            }
+            const cnt = parseInt(cntRaw, 10);
+            if (isNaN(cnt) || cnt <= 0 || cnt > 100) {
+                elements.status.textContent = '⚠️ Количество от 1 до 100';
+                return;
+            }
+            // Добавляем как обычную коробку
+            boxesData.push({
+                w: product.w,
+                d: product.d,
+                h: product.h,
+                count: cnt,
+                color: COLORS[boxesData.length % COLORS.length],
+                letter: getLetter(boxesData.length)
+            });
+            renderBoxList();
+            visualize([]);
+            elements.status.textContent = `✅ Товар "${product.name}" добавлен (${cnt} шт.)`;
+        }
+
         function setPreset() {
             boxesData = [
-                { w:0.30,d:0.20,h:0.25,count:3,color:0xe67e22 },
-                { w:0.25,d:0.25,h:0.30,count:4,color:0x3498db },
-                { w:0.40,d:0.30,h:0.20,count:2,color:0x2ecc71 },
-                { w:0.35,d:0.20,h:0.35,count:3,color:0xe74c3c },
-                { w:0.20,d:0.15,h:0.15,count:5,color:0xf1c40f },
-                { w:0.45,d:0.35,h:0.25,count:2,color:0x9b59b6 }
+                { w:0.41, d:0.64, h:0.42, count:1, color:COLORS[0] },
+                { w:0.62, d:0.49, h:0.39, count:1, color:COLORS[1] },
+                { w:0.13, d:0.69, h:0.44, count:4, color:COLORS[2] },
+                { w:0.10, d:0.69, h:0.40, count:5, color:COLORS[3] },
+                { w:0.14, d:0.86, h:0.46, count:2, color:COLORS[4] },
+                { w:0.11, d:0.69, h:0.43, count:6, color:COLORS[5] },
+                { w:0.17, d:0.96, h:0.46, count:8, color:COLORS[6] },
+                { w:0.37, d:0.72, h:0.16, count:2, color:COLORS[0] },
+                { w:0.40, d:0.39, h:0.31, count:4, color:COLORS[1] },
+                { w:0.27, d:0.23, h:0.31, count:1, color:COLORS[2] },
+                { w:0.48, d:0.24, h:0.55, count:1, color:COLORS[3] },
+                { w:0.25, d:0.48, h:0.20, count:1, color:COLORS[4] }
             ];
             boxesData.forEach((b,i) => b.letter = getLetter(i));
             renderBoxList();
             visualize([]);
+            elements.status.textContent = '📋 Загружен набор из 12 типов (122×82 см)';
         }
 
-        // ---------- WORKER (EMS без пересечений) ----------
-        function getWorkerCode() {
-            return `
-                const areaW = 1.2, areaD = 0.8;
-                let boxes = [], maxHglobal = 2.0;
-                function ors(w,d,h){ return [[w,h,d],[d,h,w],[h,w,d],[h,d,w],[w,d,h],[d,w,h]]; }
-                class EMSManager {
-                    constructor(W,H,D){ this.spaces=[{x:0,y:0,z:0,W,H,D}]; }
-                    canFit(s,w,h,d){ return w<=s.W && h<=s.H && d<=s.D; }
-                    addBox(i,[bw,bh,bd]){
-                        const s=this.spaces[i], ns=[];
-                        if(bw<s.W) ns.push({x:s.x+bw,y:s.y,z:s.z,W:s.W-bw,H:s.H,D:s.D});
-                        if(bd<s.D) ns.push({x:s.x,y:s.y,z:s.z+bd,W:bw,H:s.H,D:s.D-bd});
-                        if(bh<s.H) ns.push({x:s.x,y:s.y+bh,z:s.z,W:bw,H:s.H-bh,D:bd});
-                        this.spaces.splice(i,1);
-                        for(const n of ns) if(n.W>1e-4&&n.H>1e-4&&n.D>1e-4) this.spaces.push(n);
-                        this.cleanup();
+        // ---------- ПРО-ВОРКЕР С НОВЫМИ ГАБАРИТАМИ 1.22 x 0.82 ----------
+        const PRO_WORKER_CODE = `
+            const areaW = 1.22, areaD = 0.82;
+            const overhang = 0.01;
+            const minX = -overhang, maxX = areaW + overhang;
+            const minZ = -overhang, maxZ = areaD + overhang;
+            const floorLevel = 0.0;
+            let boxes = [], maxHglobal = 2.0;
+
+            function ors(w,d,h){ return [[w,h,d],[d,h,w],[h,w,d],[h,d,w],[w,d,h],[d,w,h]]; }
+
+            function checkSupport(pos, dims, placed) {
+                const [bw, bh, bd] = dims;
+                const y = pos.y;
+                if (y <= floorLevel + 1e-6) return true;
+                const requiredArea = bw * bd * 0.9;
+                let supportArea = 0;
+                for (const p of placed) {
+                    const [pw, ph, pd] = p.dims;
+                    const topY = p.pos.y + ph;
+                    if (Math.abs(topY - y) > 1e-4) continue;
+                    const overlapX = Math.max(0, Math.min(pos.x + bw, p.pos.x + pw) - Math.max(pos.x, p.pos.x));
+                    const overlapZ = Math.max(0, Math.min(pos.z + bd, p.pos.z + pd) - Math.max(pos.z, p.pos.z));
+                    supportArea += overlapX * overlapZ;
+                }
+                return supportArea >= requiredArea;
+            }
+
+            function checkOverhang(pos, dims) {
+                const [w, h, d] = dims;
+                return pos.x >= minX && pos.x + w <= maxX && pos.z >= minZ && pos.z + d <= maxZ;
+            }
+
+            class EMSManager {
+                constructor(W,H,D){ this.spaces=[{x:0,y:floorLevel,z:0,W,H,D}]; }
+                canFit(s,w,h,d){ return w<=s.W && h<=s.H && d<=s.D; }
+                addBox(i,[bw,bh,bd]){
+                    const s=this.spaces[i], ns=[];
+                    if(bw<s.W) ns.push({x:s.x+bw,y:s.y,z:s.z,W:s.W-bw,H:s.H,D:s.D});
+                    if(bd<s.D) ns.push({x:s.x,y:s.y,z:s.z+bd,W:bw,H:s.H,D:s.D-bd});
+                    if(bh<s.H) ns.push({x:s.x,y:s.y+bh,z:s.z,W:bw,H:s.H-bh,D:bd});
+                    this.spaces.splice(i,1);
+                    for(const n of ns) if(n.W>1e-4&&n.H>1e-4&&n.D>1e-4) this.spaces.push(n);
+                    this.cleanup();
+                }
+                cleanup(){
+                    let f=this.spaces.filter(s=>s.W>1e-4&&s.H>1e-4&&s.D>1e-4);
+                    f.sort((a,b) => a.y - b.y || (b.W*b.H*b.D) - (a.W*a.H*a.D));
+                    const r=[];
+                    for(const s of f){
+                        let c=false;
+                        for(const t of r) if(s.x>=t.x&&s.y>=t.y&&s.z>=t.z&&s.x+s.W<=t.x+t.W&&s.y+s.H<=t.y+t.H&&s.z+s.D<=t.z+t.D){c=true; break;}
+                        if(!c) r.push(s);
                     }
-                    cleanup(){
-                        let f=this.spaces.filter(s=>s.W>1e-4&&s.H>1e-4&&s.D>1e-4);
-                        const r=[];
-                        for(const s of f){
-                            let c=false;
-                            for(const t of r) if(s.x>=t.x&&s.y>=t.y&&s.z>=t.z&&s.x+s.W<=t.x+t.W&&s.y+s.H<=t.y+t.H&&s.z+s.D<=t.z+t.D){c=true; break;}
-                            if(!c) r.push(s);
+                    this.spaces=r;
+                }
+            }
+
+            function findBest(dims, ems, placed) {
+                const [bw, bh, bd] = dims;
+                let bestScore = Infinity, bestPos = null, bestSpaceIdx = null;
+
+                for (let i = 0; i < ems.spaces.length; i++) {
+                    const s = ems.spaces[i];
+                    if (!ems.canFit(s, bw, bh, bd)) continue;
+
+                    const candidates = [
+                        { x: Math.max(s.x, minX), z: Math.max(s.z, minZ) },
+                        { x: Math.min(s.x + s.W - bw, maxX - bw), z: Math.max(s.z, minZ) },
+                        { x: Math.max(s.x, minX), z: Math.min(s.z + s.D - bd, maxZ - bd) },
+                        { x: Math.min(s.x + s.W - bw, maxX - bw), z: Math.min(s.z + s.D - bd, maxZ - bd) }
+                    ];
+
+                    for (let c = 0; c < candidates.length; c++) {
+                        const posCandidate = candidates[c];
+                        if (posCandidate.x < s.x - 1e-4 || posCandidate.z < s.z - 1e-4) continue;
+                        if (posCandidate.x + bw > s.x + s.W + 1e-4) continue;
+                        if (posCandidate.z + bd > s.z + s.D + 1e-4) continue;
+                        
+                        const posTest = { x: posCandidate.x, y: s.y, z: posCandidate.z };
+                        if (!checkOverhang(posTest, dims)) continue;
+                        if (!checkSupport(posTest, dims, placed)) continue;
+
+                        const volumeRatio = (bw * bh * bd) / (s.W * s.H * s.D);
+                        const score = posTest.y * 10000 + (1 - volumeRatio) * 100 + posTest.z * 10 + posTest.x;
+                        
+                        if (score < bestScore) {
+                            bestScore = score;
+                            bestPos = posTest;
+                            bestSpaceIdx = i;
                         }
-                        this.spaces=r;
                     }
                 }
-                function findBest(dims,ems){
-                    const [bw,bh,bd]=dims; let best=null,bestScore=1/0;
-                    for(let i=0;i<ems.spaces.length;i++){
-                        const s=ems.spaces[i]; if(!ems.canFit(s,bw,bh,bd)) continue;
-                        const p={x:s.x,y:s.y,z:s.z}, score=p.z*1e4+p.y*100+p.x;
-                        if(score<bestScore){ bestScore=score; best={pos:p,idx:i}; }
-                    }
-                    return best;
-                }
-                function pack(seq,orient){
-                    const maxH=self.maxH||maxHglobal, ems=new EMSManager(areaW,maxH,areaD);
-                    const placed=[];
-                    for(let i=0;i<seq.length;i++){
-                        const b=boxes[seq[i]], dims=ors(b.w,b.d,b.h)[orient[i]%6];
-                        const best=findBest(dims,ems);
-                        if(!best) continue;
-                        placed.push({boxIdx:seq[i],pos:best.pos,dims:[dims[0],dims[1],dims[2]]});
-                        ems.addBox(best.idx,[dims[0],dims[1],dims[2]]);
-                    }
-                    return placed;
-                }
-                function fitness(s,o){ return pack(s,o).length; }
-                function randomInd(n){
-                    const s=[...Array(n).keys()];
-                    for(let i=n-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [s[i],s[j]]=[s[j],s[i]]; }
-                    return {seq:s,orient:Array.from({length:n},()=>Math.floor(Math.random()*6))};
-                }
-                function crossSeq(a,b){
-                    const n=a.length,c=Array(n).fill(-1);
-                    let s=Math.floor(Math.random()*n), e=Math.floor(Math.random()*n);
-                    if(s>e) [s,e]=[e,s];
-                    for(let i=s;i<=e;i++) c[i]=a[i];
-                    let idx=(e+1)%n, bIdx=(e+1)%n;
-                    while(c.includes(-1)){
-                        const g=b[bIdx];
-                        if(!c.includes(g)){ c[idx]=g; idx=(idx+1)%n; }
-                        bIdx=(bIdx+1)%n;
-                    }
-                    return c;
-                }
-                function crossOrient(a,b){ const p=Math.floor(Math.random()*a.length); return a.slice(0,p).concat(b.slice(p)); }
-                function mutSeq(s){ const i=Math.floor(Math.random()*s.length),j=Math.floor(Math.random()*s.length); [s[i],s[j]]=[s[j],s[i]]; return s; }
-                function mutOrient(o,r=0.1){ return o.map(v=>Math.random()<r?Math.floor(Math.random()*6):v); }
-                function tournament(pop,fits,k=3){
-                    let best=Math.floor(Math.random()*pop.length);
-                    for(let i=1;i<k;i++){ const id=Math.floor(Math.random()*pop.length); if(fits[id]>fits[best]) best=id; }
-                    return pop[best];
-                }
-                self.onmessage=function(e){
-                    const {flatBoxes,params}=e.data;
-                    boxes=flatBoxes.map(b=>({...b}));
-                    self.maxH=params.maxHeight;
-                    const n=boxes.length, popSize=params.popSize, gens=params.generations, elite=Math.floor(popSize*0.1);
-                    let population=Array.from({length:popSize},()=>randomInd(n));
-                    let best=null, bestFit=-1;
-                    for(let g=0;g<gens;g++){
-                        const fits=population.map(ind=>fitness(ind.seq,ind.orient));
-                        const maxFit=Math.max(...fits), idx=fits.indexOf(maxFit);
-                        if(maxFit>bestFit){ bestFit=maxFit; best={seq:[...population[idx].seq],orient:[...population[idx].orient]}; }
-                        self.postMessage({type:'progress',generation:g+1,bestFitness:maxFit,total:n});
-                        const sorted=fits.map((_,i)=>i).sort((a,b)=>fits[b]-fits[a]);
-                        const newPop=[];
-                        for(let i=0;i<elite;i++){
-                            const ind=population[sorted[i]];
-                            newPop.push({seq:[...ind.seq],orient:[...ind.orient]});
+                return bestPos ? { pos: bestPos, idx: bestSpaceIdx } : null;
+            }
+
+            function pack(seq) {
+                const maxH = self.maxH || maxHglobal;
+                const ems = new EMSManager(areaW + 2*overhang, maxH, areaD + 2*overhang);
+                const placed = [];
+                let maxY = 0, packedVol = 0;
+                
+                for (let i = 0; i < seq.length; i++) {
+                    const b = boxes[seq[i]];
+                    let bestDims = null, bestPos = null, bestSpaceIdx = null, bestScore = Infinity;
+                    
+                    for (let o = 0; o < 6; o++) {
+                        const dims = ors(b.w, b.d, b.h)[o];
+                        const res = findBest(dims, ems, placed);
+                        if (res) {
+                            const score = res.pos.y * 10000 + dims[1] * 100; 
+                            if (score < bestScore) {
+                                bestScore = score;
+                                bestDims = dims;
+                                bestPos = res.pos;
+                                bestSpaceIdx = res.idx;
+                            }
                         }
-                        while(newPop.length<popSize){
-                            const p1=tournament(population,fits), p2=tournament(population,fits);
-                            let child={seq:crossSeq(p1.seq,p2.seq),orient:crossOrient(p1.orient,p2.orient)};
-                            if(Math.random()<0.15) child.seq=mutSeq(child.seq);
-                            child.orient=mutOrient(child.orient,0.08);
-                            newPop.push(child);
-                        }
-                        population=newPop;
                     }
-                    const placed=pack(best.seq,best.orient);
-                    const result=placed.map(p=>({pos:p.pos,dims:p.dims,color:boxes[p.boxIdx].color,letter:boxes[p.boxIdx].letter}));
-                    self.postMessage({type:'result',placed:result,total:n});
-                };
-            `;
-        }
+                    if (!bestDims) continue;
+                    placed.push({ boxIdx: seq[i], pos: bestPos, dims: bestDims });
+                    ems.addBox(bestSpaceIdx, bestDims);
+                    const topY = bestPos.y + bestDims[1];
+                    if (topY > maxY) maxY = topY;
+                    packedVol += (bestDims[0]*bestDims[1]*bestDims[2]);
+                }
+                return { placed, maxY, packedVol };
+            }
+
+            function localRepack(placed, unplacedIndices) {
+                let bestPlaced = placed.slice();
+                let improved = true;
+                let iterations = 0;
+                while (improved && iterations < 50) {
+                    improved = false;
+                    iterations++;
+                    for (let uIdx of unplacedIndices) {
+                        const b = boxes[uIdx];
+                        for (let oU = 0; oU < 6; oU++) {
+                            const dimsU = ors(b.w, b.d, b.h)[oU];
+                            for (let r = 0; r < bestPlaced.length; r++) {
+                                const removed = bestPlaced[r];
+                                const tempEms = new EMSManager(areaW + 2*overhang, self.maxH || maxHglobal, areaD + 2*overhang);
+                                const tempPlaced = [];
+                                let canBuild = true;
+                                for (let j = 0; j < bestPlaced.length; j++) {
+                                    if (j === r) continue;
+                                    const p = bestPlaced[j];
+                                    const res = findBest(p.dims, tempEms, tempPlaced);
+                                    if (!res) { canBuild = false; break; }
+                                    tempPlaced.push({ ...p, pos: res.pos });
+                                    tempEms.addBox(res.idx, p.dims);
+                                }
+                                if (!canBuild) continue;
+                                const resU = findBest(dimsU, tempEms, tempPlaced);
+                                if (!resU) continue;
+                                const uEntry = { boxIdx: uIdx, pos: resU.pos, dims: dimsU };
+                                tempPlaced.push(uEntry);
+                                tempEms.addBox(resU.idx, dimsU);
+                                const resR = findBest(removed.dims, tempEms, tempPlaced);
+                                if (resR) {
+                                    tempPlaced.push({ ...removed, pos: resR.pos });
+                                    bestPlaced = tempPlaced;
+                                    unplacedIndices = unplacedIndices.filter(idx => idx !== uIdx);
+                                    improved = true;
+                                    break;
+                                }
+                            }
+                            if (improved) break;
+                        }
+                        if (improved) break;
+                    }
+                }
+                return bestPlaced;
+            }
+
+            function fitness(seq) {
+                const res = pack(seq);
+                return { count: res.placed.length, score: res.placed.length * 100000 + res.packedVol, maxY: res.maxY };
+            }
+
+            function randomSeq(n) { const s = [...Array(n).keys()]; for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [s[i], s[j]] = [s[j], s[i]]; } return s; }
+            function crossSeq(a,b) { const n = a.length, c = Array(n).fill(-1); let s = Math.floor(Math.random() * n), e = Math.floor(Math.random() * n); if (s > e) [s,e] = [e,s]; for (let i = s; i <= e; i++) c[i] = a[i]; let idx = (e + 1) % n; for (let i = 0; i < n; i++) { const val = b[(e + 1 + i) % n]; if (!c.includes(val)) { c[idx] = val; idx = (idx + 1) % n; } } return c; }
+            function mutSeq(s) { const i = Math.floor(Math.random() * s.length), j = Math.floor(Math.random() * s.length); [s[i], s[j]] = [s[j], s[i]]; return s; }
+            function tournament(pop, scores, k = 3) { let best = Math.floor(Math.random() * pop.length); for (let i = 1; i < k; i++) { const id = Math.floor(Math.random() * pop.length); if (scores[id] > scores[best]) best = id; } return pop[best]; }
+
+            self.onmessage = function(e) {
+                const { flatBoxes, params } = e.data;
+                boxes = flatBoxes.map(b => ({ ...b }));
+                self.maxH = params.maxHeight;
+                const n = boxes.length;
+                const popSize = params.popSize;
+                const gens = params.generations;
+                const elite = Math.floor(popSize * 0.1);
+                let population = Array.from({ length: popSize }, () => randomSeq(n));
+                let bestSeq = null, bestScore = -Infinity;
+                let bestPlacedResult = null;
+
+                for (let g = 0; g < gens; g++) {
+                    const fits = population.map(seq => fitness(seq));
+                    const scores = fits.map(f => f.score);
+                    const maxScore = Math.max(...scores);
+                    const idx = scores.indexOf(maxScore);
+                    if (maxScore > bestScore) {
+                        bestScore = maxScore;
+                        bestSeq = [...population[idx]];
+                        bestPlacedResult = pack(bestSeq);
+                    }
+                    self.postMessage({ type: 'progress', generation: g + 1, bestCount: bestPlacedResult.placed.length, total: n, score: bestScore });
+                    const sorted = scores.map((_, i) => i).sort((a, b) => scores[b] - scores[a]);
+                    const newPop = [];
+                    for (let i = 0; i < elite; i++) newPop.push([...population[sorted[i]]]);
+                    while (newPop.length < popSize) {
+                        const p1 = tournament(population, scores);
+                        const p2 = tournament(population, scores);
+                        let child = crossSeq(p1, p2);
+                        if (Math.random() < 0.15) child = mutSeq(child);
+                        newPop.push(child);
+                    }
+                    population = newPop;
+                }
+
+                let finalPlaced = bestPlacedResult.placed;
+                const unplaced = bestSeq.filter(idx => !finalPlaced.some(p => p.boxIdx === idx));
+                if (unplaced.length > 0) finalPlaced = localRepack(finalPlaced, unplaced);
+                const result = finalPlaced.map(p => ({ pos: p.pos, dims: p.dims, color: boxes[p.boxIdx].color, letter: boxes[p.boxIdx].letter }));
+                self.postMessage({ type: 'result', placed: result, total: n });
+            };
+        `;
 
         function initWorker() {
             if (worker) worker.terminate();
-            worker = new Worker(URL.createObjectURL(new Blob([getWorkerCode()], {type:'application/javascript'})));
+            const blob = new Blob([PRO_WORKER_CODE], { type: 'application/javascript' });
+            worker = new Worker(URL.createObjectURL(blob));
             worker.onmessage = (e) => {
                 const d = e.data;
                 if (d.type === 'progress') {
                     elements.gen.textContent = d.generation;
-                    elements.fitness.textContent = `${d.bestFitness}/${d.total}`;
-                    elements.status.textContent = `⚙️ Поколение ${d.generation} | Уложено: ${d.bestFitness}`;
+                    elements.fitness.textContent = `${d.bestCount}/${d.total}`;
+                    elements.status.textContent = `⚙️ PRO-эволюция: поколение ${d.generation} | уложено: ${d.bestCount}`;
                 } else if (d.type === 'result') {
                     isRunning = false;
                     elements.startBtn.disabled = false;
-                    elements.status.textContent = `✅ Упаковано ${d.placed.length} из ${d.total}`;
+                    elements.status.textContent = `✅ Упаковано ${d.placed.length} из ${d.total} (122×82 см)`;
                     visualize(d.placed);
                 }
+            };
+            worker.onerror = (err) => {
+                isRunning = false;
+                elements.startBtn.disabled = false;
+                elements.status.textContent = '❌ Ошибка алгоритма. Попробуйте снова.';
+                console.error(err);
             };
         }
 
@@ -683,16 +934,17 @@
             visualize([]);
             elements.gen.textContent = '0'; elements.fitness.textContent = '0';
             elements.packed.textContent = `0/${totalCount}`;
-            elements.status.textContent = '🟢 Сброшено.';
+            elements.status.textContent = '🔄 Вид сброшен. Паллета 122×82 см';
             updateVolumeStats();
             resetHighlight();
         }
 
+        // Обработчики
         elements.startBtn.addEventListener('click', () => {
             if (isRunning || flatBoxes.length === 0) return;
             isRunning = true;
             elements.startBtn.disabled = true;
-            elements.status.textContent = '🚀 Запуск эволюции...';
+            elements.status.textContent = '🚀 Запуск PRO-эволюции для 122×82 см...';
             initWorker();
             worker.postMessage({
                 flatBoxes,
@@ -706,7 +958,13 @@
         elements.resetBtn.addEventListener('click', resetWorkerAndView);
         elements.resetHighlightBtn.addEventListener('click', resetHighlight);
         elements.addBtn.addEventListener('click', addBox);
-        elements.clearBtn.addEventListener('click', () => { boxesData = []; renderBoxList(); visualize([]); });
+        elements.clearBtn.addEventListener('click', () => {
+            if (isRunning) { worker?.terminate(); isRunning = false; elements.startBtn.disabled = false; }
+            boxesData = [];
+            renderBoxList();
+            visualize([]);
+            elements.status.textContent = '🗑️ Список очищен';
+        });
         elements.presetBtn.addEventListener('click', setPreset);
         elements.maxHeight.addEventListener('input', () => updateVolumeStats());
         [elements.inpW, elements.inpD, elements.inpH, elements.inpCnt].forEach(inp =>
@@ -714,6 +972,17 @@
         );
         elements.toggleLabelsBtn.addEventListener('click', toggleLabels);
 
+        // Обработчик новой кнопки товара
+        elements.addProductBtn.addEventListener('click', addProduct);
+        // Добавление товара по Enter в поле количества
+        elements.productCnt.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') addProduct();
+        });
+
+        // Заполняем список товаров
+        populateProductSelect();
+
+        // Загружаем стартовый набор
         setPreset();
 
         function animate() {
