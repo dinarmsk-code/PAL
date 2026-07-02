@@ -103,9 +103,9 @@
             <h3>📦 Коробки (см)</h3>
             <div class="box-form">
                 <div class="input-row">
-                    <div class="input-group"><label>Ш</label><input id="inp-w" value="30" type="number" step="1" min="1" max="100"></div>
-                    <div class="input-group"><label>Г</label><input id="inp-d" value="20" type="number" step="1" min="1" max="100"></div>
-                    <div class="input-group"><label>В</label><input id="inp-h" value="25" type="number" step="1" min="1" max="100"></div>
+                    <div class="input-group"><label>Ш</label><input id="inp-w" value="30" type="number" step="1" min="1" max="150"></div>
+                    <div class="input-group"><label>Г</label><input id="inp-d" value="20" type="number" step="1" min="1" max="150"></div>
+                    <div class="input-group"><label>В</label><input id="inp-h" value="25" type="number" step="1" min="1" max="150"></div>
                     <div class="input-group"><label>Кол</label><input id="inp-cnt" value="2" type="number" step="1" min="1" max="100"></div>
                     <button class="btn" id="add-btn" style="flex:1;">➕</button>
                 </div>
@@ -196,7 +196,7 @@
         // ---------- ГАБАРИТЫ ПАЛЛЕТЫ 122x82 см ----------
         const AREA_W = 1.22;
         const AREA_D = 0.82;
-        const MAX_BOX_DIM = 1.0;
+        const MAX_BOX_DIM = 1.5;   // <-- ИЗМЕНЕНО: было 1.0 (100 см), теперь 1.5 (150 см)
         const COLORS = [0xe67e22, 0x3498db, 0x2ecc71, 0xe74c3c, 0xf1c40f, 0x9b59b6, 0x1abc9c];
 
         // ---------- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ----------
@@ -571,7 +571,7 @@
             const h = parseFloat(elements.inpH.value) / 100;
             const cnt = parseInt(elements.inpCnt.value, 10);
             if (isNaN(w) || isNaN(d) || isNaN(h) || isNaN(cnt) || w<=0 || d<=0 || h<=0 || cnt<=0 || w>MAX_BOX_DIM || d>MAX_BOX_DIM || h>MAX_BOX_DIM || cnt>100) {
-                elements.status.textContent = '⚠️ Проверьте размеры (1-100 см) и количество (1-100)';
+                elements.status.textContent = '⚠️ Проверьте размеры (1-150 см) и количество (1-100)';  // <-- текст ошибки обновлён
                 return;
             }
             const existing = boxesData.find(b => Math.abs(b.w - w) < 1e-6 && Math.abs(b.d - d) < 1e-6 && Math.abs(b.h - h) < 1e-6);
