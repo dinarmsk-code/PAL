@@ -828,7 +828,7 @@
 
         // ---------- PRO ВОРКЕР ----------
         const PRO_WORKER_CODE = `
-            const areaW = 1.22, areaD = 0.82, overhang = 0.01;
+            const areaW = 1.22, areaD = 0.82, overhang = 0; // границы упаковки строго равны размеру паллеты, без допуска на свес
             const minX = -overhang, maxX = areaW + overhang, minZ = -overhang, maxZ = areaD + overhang, floorLevel = 0.0;
             let boxes = [], maxHglobal = 2.0;
             function fitsFootprint(a,b){ return (a<=areaW+1e-9 && b<=areaD+1e-9) || (a<=areaD+1e-9 && b<=areaW+1e-9); }
