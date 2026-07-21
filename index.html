@@ -390,7 +390,7 @@
         // 1.  API — Google Sheets (заменяет localStorage)
         // =====================================================================
         const API_URL =
-            'https://script.google.com/macros/s/AKfycbynBBlaVVVuEF6-mNOtlS_Z_ravBIMkHWXchUKdoj-Vyp1_g-ZOwoWVzewqdc0g8wYtAw/exec';
+            'https://script.google.com/macros/s/AKfycbzO3VnADo5N3gAoFe5a8hcr6EDdqSocMPupgA8nxyt3Vr6cCU9kZFCe8GAvFut3zR_yQg/exec';
 
         // ---------- Дефолтный каталог (fallback, если API недоступен) ----------
         const DEFAULT_PRODUCTS = [
@@ -423,60 +423,55 @@
         let productCatalog = [...DEFAULT_PRODUCTS];
         let useApi = true;
 
-        // ---------- Загрузка товаров из Google Sheets ----------
+        // ---------- Загрузка товаров из Google Sheets (JSONP) ----------
         async function loadUserProductsFromSheet() {
-            try {
-                const resp = await fetch(API_URL);
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const data = await resp.json();
-                // Ожидаем массив объектов { name, w, d, h }
-                if (Array.isArray(data) && data.length) {
-                    // Проверяем, что все объекты имеют нужные поля
-                    const valid = data.every(p => p.name && typeof p.w === 'number' && typeof p.d === 'number' && typeof p
-                        .h === 'number');
-                    if (valid) {
+            return new Promise((resolve) => {
+                const callbackName = 'jsonpCallback_' + Date.now();
+                window[callbackName] = (data) => {
+                    delete window[callbackName];
+                    document.head.removeChild(script);
+                    if (Array.isArray(data) && data.length) {
                         productCatalog = [...data];
                         document.getElementById('product-source-label').textContent = '(Google Sheets ✅)';
-                        return true;
+                    } else {
+                        console.warn('Некорректный ответ от API, используем стандартный каталог');
+                        productCatalog = [...DEFAULT_PRODUCTS];
+                        document.getElementById('product-source-label').textContent = '(стандартный каталог)';
                     }
-                }
-                // Если данные невалидны — оставляем DEFAULT_PRODUCTS
-                console.warn('Некорректный ответ от API, используем стандартный каталог');
-                productCatalog = [...DEFAULT_PRODUCTS];
-                document.getElementById('product-source-label').textContent = '(стандартный каталог)';
-                return false;
-            } catch (e) {
-                console.warn('Не удалось загрузить Google Sheets, fallback на стандартный каталог', e);
-                productCatalog = [...DEFAULT_PRODUCTS];
-                document.getElementById('product-source-label').textContent = '(стандартный каталог)';
-                return false;
-            }
+                    resolve();
+                };
+
+                const script = document.createElement('script');
+                script.src = `${API_URL}?callback=${callbackName}`;
+                script.onerror = () => {
+                    delete window[callbackName];
+                    document.head.removeChild(script);
+                    console.warn('Не удалось загрузить Google Sheets, fallback на стандартный каталог');
+                    productCatalog = [...DEFAULT_PRODUCTS];
+                    document.getElementById('product-source-label').textContent = '(стандартный каталог)';
+                    resolve();
+                };
+                document.head.appendChild(script);
+            });
         }
 
-        // ---------- Сохранение нового товара в Google Sheets ----------
+        // ---------- Сохранение нового товара в Google Sheets (GET, no-cors) ----------
         async function addCustomProductToSheet(product) {
+            const statusEl = document.getElementById('custom-status');
+            const url = `${API_URL}?action=add&name=${encodeURIComponent(product.name)}&w=${product.w}&d=${product.d}&h=${product.h}`;
             try {
-                const resp = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(product)
-                });
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const result = await resp.json();
-                if (result.status === 'success') {
-                    // После успешной записи — перезагружаем каталог
-                    await loadUserProductsFromSheet();
-                    rebuildProductSelect();
-                    return true;
-                } else {
-                    throw new Error(result.message || 'Ошибка записи');
-                }
+                await fetch(url, { mode: 'no-cors' });
+                statusEl.textContent = '⏳ Обновление каталога...';
+                await new Promise(r => setTimeout(r, 2500));
+                await loadUserProductsFromSheet();
+                rebuildProductSelect();
+                return true;
             } catch (e) {
                 console.error('Ошибка при сохранении в Google Sheets:', e);
-                // fallback: добавляем локально, чтобы не терять данные пользователя
+                // fallback: добавляем локально
                 productCatalog.push(product);
                 rebuildProductSelect();
-                document.getElementById('custom-status').textContent = '⚠️ Сохранено локально (ошибка API)';
+                document.getElementById('custom-status').textContent = '⚠️ Сохранено локально (ошибка сети)';
                 return false;
             }
         }
@@ -493,11 +488,9 @@
                     `${p.name} (${Math.round(p.w * 100)}×${Math.round(p.d * 100)}×${Math.round(p.h * 100)})`;
                 sel.appendChild(opt);
             });
-            // восстановить выбранное значение, если возможно
             if (currentVal && sel.querySelector(`option[value="${currentVal}"]`)) {
                 sel.value = currentVal;
             }
-            // обновить отображение размеров
             updateProductDims();
         }
 
@@ -545,8 +538,6 @@
                 wEl.value = '';
                 dEl.value = '';
                 hEl.value = '';
-            } else {
-                statusEl.textContent = '⚠️ Сохранено локально (проверьте подключение)';
             }
         }
 
